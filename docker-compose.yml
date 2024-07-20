@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:12
+    container_name: postgres
+    environment:
+      POSTGRES_DB: retailorders
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - order-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_VHOST: assessment
+      RABBITMQ_DEFAULT_PASS: rabbitmq
+      RABBITMQ_DEFAULT_USER: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - order-network
+  retail-orders:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: retail-orders:latest
+    container_name: retail-orders-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/retailorders
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_RABBITMQ_ADDRESS: rabbitmq:5672
+      SPRING_RABBITMQ_USERNAME: rabbitmq
+      SPRING_RABBITMQ_PASSWORD: rabbitmq
+      SPRING_RABBITMQ_VHOST: assessment
+    networks:
+      - order-network
+
+volumes:
+  postgres_data:
+
+networks:
+  order-network:
+    driver: bridge
